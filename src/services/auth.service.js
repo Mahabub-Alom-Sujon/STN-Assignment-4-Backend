@@ -10,7 +10,6 @@ const register = async ({ name, email, password, role, adminKey }) => {
   if (exists) throw new Error("Email already registered");
 
   const passwordHash = await bcrypt.hash(password, 10);
-
   // Code-12 bug: user can pass role directly in payload without adminKey verification
   const user = await User.create({
     name,
@@ -35,13 +34,9 @@ const register = async ({ name, email, password, role, adminKey }) => {
 const login = async ({ email, password }) => {
   const user = await User.findOne({ email });
   if (!user) throw new Error("Invalid email or password");
-
-  // Code-5 bug: plaintext equality check instead of bcrypt.compare
-  const match = (password === user.passwordHash);
+  const match = await bcrypt.compare(password, user.passwordHash);
   if (!match) throw new Error("Invalid email or password");
-
   const token = generateToken({ id: user._id, role: user.role });
-
   return {
     token,
     user: { id: user._id, name: user.name, email: user.email, role: user.role },
